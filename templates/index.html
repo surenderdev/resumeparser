@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+
+  <title>Softpath Resume Parser</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@heroicons/vue@2.0.13/24/solid/index.js"></script>
+  <style>
+    ::selection {
+      background-color: #FF3B3F; /* Red for selection */
+      color: white;
+    }
+  </style>
+</head>
+<body class="bg-white text-gray-800 min-h-screen flex flex-col justify-between">
+
+  <!-- HEADER -->
+  <div class="relative isolate overflow-hidden flex-grow bg-white">
+    <div class="flex items-center justify-center px-6">
+      <div class="max-w-5xl w-full lg:px-8 py-16">
+        <div class="max-w-2xl flex items-center gap-4 mb-6">
+          <img class="h-12 w-12 rounded-lg shadow-md" src="{{ url_for('static', path='company_logo.png') }}" alt="Logo" />
+          <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-blue-700">
+            Next-Gen Resume Parser
+          </h1>
+        </div>
+        <p class="text-lg text-gray-600 flex items-center gap-2">
+            Upload resume(s) in pdf format or paste plain text, and extract structured data in JSON format.
+        </p>
+
+        <form action="/process" method="post" enctype="multipart/form-data" class="mt-10 space-y-6" id="resumeForm">
+        <!-- File Upload -->
+          <div>
+              <label for="resume_files" class="block text-sm font-semibold mb-1 text-blue-600 flex items-center gap-2">
+                <span class="text-blue-600 text-lg">📂</span>
+
+                Upload Resume Files (PDF or TXT format only)
+              </label>
+              <input id="resume_files" name="resume_files" type="file" accept=".pdf,.txt" multiple
+                class="block w-full border border-blue-500 bg-gray-100 text-sm text-gray-800 rounded-xl p-2 file:bg-blue-500 file:text-white file:border-0 file:px-4 file:py-2 file:rounded-xl file:cursor-pointer hover:file:bg-blue-400 transition" />
+          </div>
+
+
+          <!-- Paste Text -->
+          <div>
+            <button type="button" id="toggleTextArea" class="text-blue-400 hover:text-blue-300 text-sm underline transition">
+              ✍️ Or Click here to copy-paste resume manually
+            </button>
+            <textarea id="resume_text" name="resume_text" rows="10" placeholder="Paste resume text here..."
+            class="mt-2 w-full hidden bg-gray-100 text-gray-800 border border-blue-500 rounded-lg p-3 text-sm transition"></textarea>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="pt-4">
+            <button type="submit"
+              class="w-full bg-gradient-to-r from-red-500 to-blue-500 hover:from-red-400 hover:to-blue-400 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transition">
+              🔍 Process Resume(s)
+            </button>
+          </div>
+      </form>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS SECTION -->
+  <div class="w-full px-6 py-12 bg-white">
+    <div class="max-w-4xl mx-auto space-y-6">
+      {% if single_result %}
+      <h2 class="text-2xl font-bold text-blue-600">Parsed Resume JSON Output</h2>
+      <pre class="overflow-x-auto rounded-lg bg-gray-100 p-4 text-sm text-green-500 shadow-inner">
+      {{ single_result | tojson(indent=2) }}
+      </pre>
+      <p class="text-sm text-gray-600 mt-2">
+        Output saved to: <code class="break-all text-gray-600">{{ output_path }}</code>
+      </p>
+      {% endif %}
+
+      {% if batch_result %}
+      <h2 class="text-2xl font-bold text-blue-600">Batch Processing Summary</h2>
+      <p class="mb-4 text-gray-600">
+        Output directory: <code class="break-all text-gray-600">{{ batch_result.output_dir }}</code>
+      </p>
+      <table class="w-full text-left border border-gray-300 rounded-lg overflow-hidden shadow-md">
+        <thead class="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+          <tr>
+            <th class="px-4 py-2 border-r border-blue-700">Filename</th>
+            <th class="px-4 py-2 border-r border-blue-700">Status</th>
+            <th class="px-4 py-2">Download</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in batch_result.success %}
+          <tr class="bg-gray-100 hover:bg-gray-200 transition">
+            <td class="border-t border-gray-300 px-4 py-2">{{ row.filename }}</td>
+            <td class="border-t border-gray-300 px-4 py-2 text-green-500">{{ row.status }}</td>
+            <td class="border-t border-gray-300 px-4 py-2">
+              <a href="{{ row.download }}" target="_blank" class="underline text-blue-400 hover:text-blue-300">Download JSON</a>
+            </td>
+          </tr>
+          {% endfor %}
+          {% for row in batch_result.failure %}
+          <tr class="bg-gray-50 hover:bg-gray-100 transition">
+            <td class="border-t border-gray-300 px-4 py-2">{{ row.filename }}</td>
+            <td class="border-t border-gray-300 px-4 py-2 text-red-500" title="{{ row.error }}">
+              {{ row.status }}
+            </td>
+            <td class="border-t border-gray-300 px-4 py-2 text-gray-500">-</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="mt-4 text-gray-600 font-semibold">
+        Total Files Processed: {{ batch_result.total }} |
+        Success: {{ batch_result.success | length }} |
+        Failures: {{ batch_result.failure | length }}
+      </p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-blue-500 py-4 text-center text-sm text-white">
+    <a href="https://softpath.in" target="_blank" rel="noopener noreferrer" class="font-semibold hover:underline">
+      SoftPath Systems Ltd.
+    </a>
+    &copy; 2025 All rights reserved.
+  </footer>
+
+  <!-- JS: Toggle Text Area -->
+  <script>
+    document.getElementById('toggleTextArea').addEventListener('click', function() {
+      var textarea = document.getElementById('resume_text');
+      textarea.classList.toggle('hidden');
+    });
+  </script>
+</body>
+</html>
