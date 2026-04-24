@@ -1,30 +1,23 @@
 import os
 import json
-import yaml
 from pathlib import Path
 from typing import Union
+from dotenv import load_dotenv
 from openai import AzureOpenAI
 from pypdf import PdfReader
-from docx import Document 
+from docx import Document
 from datetime import datetime
 
-# Load Azure OpenAI configuration
-with open("config.yaml", "r") as f:
-    config = yaml.safe_load(f)
-
-api_key = config["AZURE_OPENAI_API_KEY"]
-api_endpoint = config["AZURE_OPENAI_ENDPOINT"]
-api_version = config["AZURE_OPENAI_API_VERSION"]
-deployment_name = config["AZURE_OPENAI_DEPLOYMENT_NAME"]
+load_dotenv()
 
 client = AzureOpenAI(
-    api_key=api_key,
-    azure_endpoint=api_endpoint,
-    api_version=api_version
+    api_key=os.environ["AZURE_OPENAI_API_KEY"],
+    azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+    api_version=os.environ["AZURE_OPENAI_API_VERSION"],
 )
+deployment_name = os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"]
 
 # ------------------ Core AI Parsing (untouched) ------------------ #
-from datetime import datetime
 
 def ats_extractor(resume_text: str) -> str:
     CURRENT_MONTH = datetime.now().strftime("%B %Y")  # e.g., June 2025
